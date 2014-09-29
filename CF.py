@@ -31,16 +31,16 @@ train = dat - test
 
 # inverse frequency vector similarity (cosine similarity)
 def IFVS(a, i, InvFreq):
-	w = np.sum((InvFreq * a) * (InvFreq * i)) /\
-	 (np.sqrt(np.sum((InvFreq*InvFreq) * (a*a))) *\
-	  np.sqrt(np.sum((InvFreq*InvFreq) * (i*i))))
+	w = np.dot( (InvFreq * a), (InvFreq * i) ) /\
+	 (np.sqrt(np.dot(np.square(InvFreq), np.square(a))) *\
+	  np.sqrt(np.dot(np.square(InvFreq), np.square(i))))
 	return w
 
 # prediction score
 def pred(similarities, data, cc):
 	allj = data[cc]
 	jbar = np.sum(allj) / train.shape[0]
-	score = np.sum(allj, similarities) / np.sum(similarities)
+	score = np.dot(allj, similarities) / np.sum(similarities)
 	p = jbar + (1 - jbar) * score
 	return p
 
