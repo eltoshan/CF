@@ -64,14 +64,32 @@ sqr_mag = np.diag(similarity)
 inv_sqr_mag = 1 / sqr_mag
 inv_sqr_mag[np.isinf(inv_sqr_mag)] = 0
 inv_mag = np.sqrt(inv_sqr_mag)
-cosine = similarity * inv_mag
-cosine = cosine.T * inv_mag
+cosine_sim = similarity * inv_mag
+cosine_sim = cosine_sim.T * inv_mag
 
 # set diagonal to 0	
-np.fill_diagonal(cosine,0)
+np.fill_diagonal(cosine_sim,0)
 
 print time.time() - start
 
-print cosine[:3,:3]
+print cosine_sim[:3,:3]
 print IFVS(np.array(train.iloc[[2]]),np.array(train.iloc[[0]]),InvFreq)
-print cosine.shape
+print cosine_sim.shape
+
+
+# prediction
+
+start = time.time()
+
+mbr_pred = np.zeros([test.shape[0], test.shape[1]])
+
+for (mbr, j) in np.ndindex(mbr_pred.shape):
+	cc = dat.columns.values[j]
+	if train.iloc[mbr][j] == 1:
+		mbr_pred[mbr, j] = 0
+	else:
+		mbr_pred[mbr, j] = pred(similarities=similarity[mbr,:], data=train, cc=cc)
+
+print time.time() - start
+
+print mbr_pred[:3,:10]
