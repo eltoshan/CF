@@ -36,6 +36,17 @@ def IFVS(a, i, InvFreq):
 	  np.sqrt(np.dot(np.square(InvFreq), np.square(i).T)))
 	return w
 
+# similarity matrix, faster than looping through with IFVS function
+def IFVS_mat(data, InvFreq):
+	similarity = np.dot(InvFreq * data, (InvFreq * data).T)
+	sqr_mag = np.diag(similarity)
+	inv_sqr_mag = 1 / sqr_mag
+	inv_sqr_mag[np.isinf(inv_sqr_mag)] = 0
+	inv_mag = np.sqrt(inv_sqr_mag)
+	cosine_sim = similarity * inv_mag
+	cosine_sim = cosine_sim.T * inv_mag
+	return cosine_sim
+
 # prediction score
 def pred(similarities, data, cc):
 	allj = data[cc]
@@ -57,24 +68,17 @@ start = time.time()
 InvFreq = np.array(np.log(train.shape[0] / np.sum(train, 0))).T
 InvFreq[np.isinf(InvFreq)] = 0
 
-
 # similarity matrix, faster than looping through with IFVS function
-similarity = np.dot(InvFreq * train, (InvFreq * train).T)
-sqr_mag = np.diag(similarity)
-inv_sqr_mag = 1 / sqr_mag
-inv_sqr_mag[np.isinf(inv_sqr_mag)] = 0
-inv_mag = np.sqrt(inv_sqr_mag)
-cosine_sim = similarity * inv_mag
-cosine_sim = cosine_sim.T * inv_mag
+cosine_sim = IFVS_mat(data=train, InvFreq=InvFreq)
 
 # set diagonal to 0	
 np.fill_diagonal(cosine_sim,0)
-
+	
 print time.time() - start
 
-print cosine_sim[:3,:3]
-print IFVS(np.array(train.iloc[[2]]),np.array(train.iloc[[1]]),InvFreq)
-print cosine_sim.shape
+# print cosine_sim[:3,:3]
+# print IFVS(np.array(train.iloc[[2]]),np.array(train.iloc[[0]]),InvFreq)
+# print cosine_sim.shape
 
 
 # prediction
@@ -88,8 +92,13 @@ for (mbr, j) in np.ndindex(mbr_pred.shape):
 	if train.iloc[mbr][j] == 1:
 		mbr_pred[mbr, j] = 0
 	else:
-		mbr_pred[mbr, j] = pred(similarities=similarity[mbr,:], data=train, cc=cc)
+		mbr_pred[mbr, j] = pred(similarities=cosine_sim[mbr,:], data=train, cc=cc)
 
 print time.time() - start
 
-print mbr_pred[:3,:10]
+print mbr_pred[:5,:5]
+
+
+###########################
+# roc and auc             #
+###########################
