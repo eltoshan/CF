@@ -96,9 +96,8 @@ for (mbr, j) in np.ndindex(mbr_pred.shape):
 
 print time.time() - start
 
-print mbr_pred[:5,:5]
+#print mbr_pred[:5,:5]
 
 
-###########################
-# roc and auc             #
-###########################
+mbr_pred.to_csv("./data/mbr_pred.csv")
+test.to_csv("./data/test.csv")
