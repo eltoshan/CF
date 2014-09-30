@@ -98,6 +98,6 @@ print time.time() - start
 
 #print mbr_pred[:5,:5]
 
-
+mbr_pred = DataFrame(mbr_pred, index = test.index, columns = test.columns.values)
 mbr_pred.to_csv("./data/mbr_pred.csv")
 test.to_csv("./data/test.csv")
