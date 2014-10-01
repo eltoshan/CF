@@ -2,17 +2,11 @@ import pandas as pd
 import numpy as np
 
 #import data and do a bit of clean up
-dat = pd.read_csv("./data/DAT.csv")
+dat = pd.read_csv("./data/datHCC.csv")
+
+dat.index = dat['ECI']
+dat = dat.drop(['ECI','HCC_RAF','HCCCount'],1)
 dat = dat.astype('float32')
-
-colnames = dat.columns.values
-colnames[0] = "eci"
-dat.columns = colnames
-
-rownames = dat['eci']
-dat.index = rownames
-
-dat = dat.drop('eci',1)
 
 #reserve ~10% of data for test set
 np.random.seed(123123)
@@ -21,9 +15,14 @@ binoms = np.random.binomial(n, p, (dat.shape[0], dat.shape[1]))
 
 test = dat * binoms
 train = dat - test
-#print train[:3]
-#print train.shape
 
+
+# print train[:3]
+# print train.shape
+# print np.sum(np.sum(dat))
+# print np.sum(np.sum(train))
+# print np.sum(np.sum(test))
+# exit()
 
 ####################
 # helper functions #
@@ -76,9 +75,12 @@ np.fill_diagonal(cosine_sim,0)
 	
 print time.time() - start
 
-# print cosine_sim[:3,:3]
-# print IFVS(np.array(train.iloc[[2]]),np.array(train.iloc[[0]]),InvFreq)
-# print cosine_sim.shape
+print cosine_sim[20:40,:5]
+print np.sum(np.sum(cosine_sim))
+print IFVS(np.array(train.iloc[[38]]),np.array(train.iloc[[2]]),InvFreq)
+print cosine_sim.shape
+
+
 
 
 # prediction
