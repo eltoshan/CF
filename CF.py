@@ -75,9 +75,9 @@ np.fill_diagonal(cosine_sim,0)
 	
 print time.time() - start
 
-print cosine_sim[20:40,:5]
-print np.sum(np.sum(cosine_sim))
-print IFVS(np.array(train.iloc[[38]]),np.array(train.iloc[[2]]),InvFreq)
+# print cosine_sim[20:40,:5]
+# print np.sum(np.sum(cosine_sim))
+# print IFVS(np.array(train.iloc[[38]]),np.array(train.iloc[[2]]),InvFreq)
 print cosine_sim.shape
 
 

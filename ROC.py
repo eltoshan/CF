@@ -25,7 +25,7 @@ dat = dat.astype('float64')
 
 start = time.time()
 
-K = 1000
+K = 10000
 
 tpr = np.zeros((K, test.shape[1]))
 fpr = np.zeros((K, test.shape[1]))
