@@ -105,9 +105,9 @@ if __name__ == "__main__":
 
     # compare models
 
-    ranks = [4, 12]
+    ranks = [4, 50]
     numIters = [5, 10]
-    alphas = [0.01, 1.0, 100.0]
+    alphas = [0.01, 1.0, 1000.0]
     bestModel = None
     bestValidationRmse = float("inf")
     bestRank = 0
@@ -132,9 +132,6 @@ if __name__ == "__main__":
 
     print "The best model was trained with rank = %d, alpha = %.2f " % (bestRank, bestAlpha) \
         + "and numIter = %d, and its RMSE on the test set is %f." % (bestNumIter, testRmse)
-
-
-    # compare explicit vs implicit
 
     # clean up
     sc.stop
