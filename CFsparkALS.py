@@ -16,7 +16,8 @@ def parseRating(line):
     Parses a rating record for HCC condition flags in format ECI,hccID,flag .
     """
     fields = line.strip().split(",")
-    return (long(fields[0]) + randint(0,9)) % 10, (int(fields[0]), int(fields[1]), float(fields[2]))
+    return randint(0,9) % 10, \
+    	(float(fields[0]), float(fields[1]), float(fields[2]))
 
 def parseHCC(line):
     """
@@ -68,7 +69,7 @@ if __name__ == "__main__":
     dataHomeDir = sys.argv[1]
 
     # ratings is an RDD of (last digit of timestamp, (userId, movieId, rating))
-    ratings = sc.textFile(join(dataHomeDir, "datHCClist.csv")).map(parseRating)
+    ratings = sc.textFile(join(dataHomeDir, "datLong.csv")).map(parseRating)
 
     # movies is an RDD of (movieId, movieTitle)
     #HCCs = dict(sc.textFile(join(dataHomeDir, "hccLabels.dat")).map(parseHCC).collect())
@@ -104,30 +105,32 @@ if __name__ == "__main__":
 
     # compare models
 
-    ranks = [4, 20]
+    ranks = [4, 12]
     numIters = [5, 10]
-    alphas = [1, 10000]
+    alphas = [0.01, 1.0, 100.0]
     bestModel = None
     bestValidationRmse = float("inf")
     bestRank = 0
+    bestAlpha = -1
     bestNumIter = -1
 
-    for rank, numIter in itertools.product(ranks, numIters):
+    for rank, numIter, alph in itertools.product(ranks, numIters, alphas):
     	start = time.time()
-        model = ALS.train(training, rank, numIter)
+        model = ALS.trainImplicit(training, rank, numIter, alpha = alph)
         validationRmse = computeRmse(model, validation, numValidation)
         print "Training time: %.2f seconds" % (time.time() - start)
         print "RMSE (validation) = %f for the model trained with " % validationRmse + \
-              "rank = %d, and numIter = %d." % (rank, numIter)
+              "rank = %d, alpha = %.2f, and numIter = %d." % (rank, alph, numIter)
         if (validationRmse < bestValidationRmse):
             bestModel = model
             bestValidationRmse = validationRmse
             bestRank = rank
+            bestAlpha = alph
             bestNumIter = numIter
 
     testRmse = computeRmse(bestModel, test, numTest)
 
-    print "The best model was trained with rank = %d, " % (bestRank) \
+    print "The best model was trained with rank = %d, alpha = %.2f " % (bestRank, bestAlpha) \
         + "and numIter = %d, and its RMSE on the test set is %f." % (bestNumIter, testRmse)
 
 
