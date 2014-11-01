@@ -3,6 +3,8 @@
 import sys
 import itertools
 import time
+import csv
+import random
 from random import randint
 from math import sqrt
 from operator import add
@@ -42,6 +44,15 @@ def loadRatings(ratingsFile):
     else:
         return ratings
 
+def compareRatings(model, data):
+    """
+    Compare predicted ratings to actual ratings
+    """
+    predictions = model.predictAll(data.map(lambda x: (x[0], x[1])))
+    predictionsAndRatings = predictions.map(lambda x: ((x[0], x[1]), x[2])) \
+      .join(data.map(lambda x: ((x[0], x[1]), x[2])))
+    return predictionsAndRatings
+
 def computeRmse(model, data, n):
     """
     Compute RMSE (Root Mean Squared Error).
@@ -65,6 +76,8 @@ if __name__ == "__main__":
       .set("spark.executor.memory", "2g")
     sc = SparkContext(conf=conf)
 
+    random.seed(123123)
+
     # load ratings and HCC labels
     dataHomeDir = sys.argv[1]
 
@@ -72,15 +85,15 @@ if __name__ == "__main__":
     ratings = sc.textFile(join(dataHomeDir, "datLong.csv")).map(parseRating)
 
     # movies is an RDD of (movieId, movieTitle)
-    #HCCs = dict(sc.textFile(join(dataHomeDir, "hccLabels.dat")).map(parseHCC).collect())
+    # HCCs = dict(sc.textFile(join(dataHomeDir, "hccLabels.dat")).map(parseHCC).collect())
 
 
 
-    numRatings = ratings.count()
-    numMbrs = ratings.values().map(lambda r: r[0]).distinct().count()
-    numHCCs = ratings.values().map(lambda r: r[1]).distinct().count()
+    # numRatings = ratings.count()
+    # numMbrs = ratings.values().map(lambda r: r[0]).distinct().count()
+    # numHCCs = ratings.values().map(lambda r: r[1]).distinct().count()
 
-    print "Got %d ratings from %d users on %d HCCs." % (numRatings, numMbrs, numHCCs)
+    # print "Got %d ratings from %d users on %d HCCs." % (numRatings, numMbrs, numHCCs)
 
     # split to training/validation/test
     numPartitions = 4
@@ -105,9 +118,9 @@ if __name__ == "__main__":
 
     # compare models
 
-    ranks = [4, 50]
-    numIters = [5, 10]
-    alphas = [0.01, 1.0, 1000.0]
+    ranks = [100]
+    numIters = [10]
+    alphas = [100.0]
     bestModel = None
     bestValidationRmse = float("inf")
     bestRank = 0
@@ -129,9 +142,21 @@ if __name__ == "__main__":
             bestNumIter = numIter
 
     testRmse = computeRmse(bestModel, test, numTest)
-
+ 	
     print "The best model was trained with rank = %d, alpha = %.2f " % (bestRank, bestAlpha) \
         + "and numIter = %d, and its RMSE on the test set is %f." % (bestNumIter, testRmse)
+
+
+    # compare predicted vs actual ratings on test set
+    # compRatings = compareRatings(bestModel, test).values().collect()
+    # with open("./out/alsPred_imp.csv", "wb") as f:
+    # 	writer = csv.writer(f)
+    # 	writer.writerows(compRatings)
+    # ratingKeys = compareRatings(bestModel, test).keys().collect()
+    # with open("./out/alsPred_keys.csv", "wb") as f:
+    # 	writer = csv.writer(f)
+    # 	writer.writerows(ratingKeys)
+
 
     # clean up
     sc.stop

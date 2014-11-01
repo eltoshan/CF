@@ -1,78 +1,82 @@
 import numpy as np
 import pandas as pd
-import time
 
-###############################################################################
-"""
-@INPUT:
-    R     : a matrix to be factorized, dimension N x M
-    P     : an initial matrix of dimension N x K
-    Q     : an initial matrix of dimension M x K
-    K     : the number of latent features
-    steps : the maximum number of steps to perform the optimisation
-    alpha : the learning rate
-    beta  : the regularization parameter
-@OUTPUT:
-    the final matrices P and Q
-"""
-def matrix_factorization(R, P, Q, K, steps=5000, alpha=0.0002, beta=0.02):
-    Q = Q.T
-    for step in xrange(steps):
-        for i in xrange(len(R)):
-            for j in xrange(len(R[i])):
-                if R[i][j] > 0:
-                    eij = R[i][j] - np.dot(P[i,:],Q[:,j])
-                    for k in xrange(K):
-                        P[i][k] = P[i][k] + alpha * (2 * eij * Q[k][j] - beta * P[i][k])
-                        Q[k][j] = Q[k][j] + alpha * (2 * eij * P[i][k] - beta * Q[k][j])
-        eR = np.dot(P,Q)
-        e = 0
-        for i in xrange(len(R)):
-            for j in xrange(len(R[i])):
-                if R[i][j] > 0:
-                    e = e + np.square(R[i][j] - np.dot(P[i,:],Q[:,j]))
-                    for k in xrange(K):
-                        e = e + (beta/2) * ( np.square(P[i][k]) + np.square(Q[k][j]) )
-        if e < 0.001:
-            break
-    return P, Q.T
 
-###############################################################################
+class ALSModel():
 
-#import data and do a bit of clean up
-dat = pd.read_csv("./data/datHCC.csv")
+    def __init__(self, ratings, num_factors=20, num_iterations=10, reg_param=0.30):
+        self.Q = ratings
+        self.num_factors = num_factors
+        self.num_iterations = num_iterations
+        self.reg_param = reg_param
 
-dat.index = dat['ECI']
-dat = dat.drop(['ECI','HCC_RAF','HCCCount'],1)
-dat = dat.astype('float32')
+    def train_model(self):
+        m = self.Q.shape[0]
+        n = self.Q.shape[1]
+        nRatings = np.count_nonzero(self.Q)
 
-#reserve ~10% of data for test set
-np.random.seed(123123)
-n, p = 1, 0.1
-binoms = np.random.binomial(n, p, (dat.shape[0], dat.shape[1]))
+        W = self.Q>0.5
+        W[W == True] = 1
+        W[W == False] = 0
+        W = W.astype(np.float64, copy=False)
+        Nu = np.sum(W, axis=1)
+        Ni = np.sum(W, axis=0)
 
-test = dat * binoms
-train = dat - test
+        X = np.random.rand(m, self.num_factors) 
+        Y = np.random.rand(self.num_factors, n)
+        lambda_eye = self.reg_param * np.eye(self.num_factors)
 
-###############################################################################
+        for ii in range(self.num_iterations):
+            for u, Wu in enumerate(W):
+                X[u] = np.linalg.solve(np.dot(Y, np.dot(np.diag(Wu), Y.T)) + max(1, Nu[u]) * lambda_eye,
+                                       np.dot(Y, np.dot(np.diag(Wu), self.Q[u].T))).T
+            for i, Wi in enumerate(W.T):
+                Y[:,i] = np.linalg.solve(np.dot(X.T, np.dot(np.diag(Wi), X)) + max(1, Ni[i]) * lambda_eye,
+                                         np.dot(X.T, np.dot(np.diag(Wi), self.Q[:, i])))
+            print "%dth iteration is completed" % (ii+1)
+        return factoredModel(X, Y)
 
-R = train
 
-R = np.array(R)
+class factoredModel():
 
-N = R.shape[0]
-M = R.shape[1]
-K = 2
+    def __init__(self, userMat, itemMat):
+        self.X = userMat
+        self.Y = itemMat
 
-P = np.random.rand(N,K)
-Q = np.random.rand(M,K)
+    def computeRMSE(self, ratings):
+        Q = ratings
+        nRatings = np.count_nonzero(ratings)
+        W = ratings>0.5
+        W[W == True] = 1
+        W[W == False] = 0
+        W = W.astype(np.float64, copy=False)
+        Qhat = W * np.dot(self.X, self.Y)
+        RMSE = np.sqrt(np.sum((W * (Q - Qhat)**2)) / nRatings)
+        return Qhat, RMSE
 
-start = time.time()
-nP, nQ = matrix_factorization(R, P, Q, K, steps=5000, alpha=0.0002, beta=0.02)
-print time.time() - start
 
-###############################################################################
+if __name__ == "__main__":
 
-mbr_pred = np.dot(nP, nQ.T)
-mbr_pred = mbr_pred/np.max(mbr_pred)
-mbr_pred[R==1] = 0
+    # load data
+    ratings = pd.read_csv("./data/nrgRatings.csv", header=None)
+    ratings.columns = ['climbID','userID','rating']
+    dat = ratings.pivot_table(cols=['climbID'], rows=['userID'], values=['rating'])
+    dat = dat.fillna(0)
+
+    # train/test split
+    np.random.seed(123123)
+    n, p = 1, 0.2
+    test = np.random.binomial(n, p, (dat.shape[0], dat.shape[1]))
+    train = np.zeros((dat.shape[0], dat.shape[1]))
+    train[test==0] = 1
+    test = (test * dat).values
+    train = (train * dat).values
+
+    # create model
+    model = ALSModel(train)
+    trainedModel = model.train_model()
+
+    # evaluate on test set
+    Qhat, testRMSE = trainedModel.computeRMSE(test)
+
+    print "Test set RMSE = %f" % testRMSE
