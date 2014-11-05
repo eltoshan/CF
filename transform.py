@@ -39,11 +39,12 @@ if __name__ == "__main__":
 	u2 = getUsers2(data)
 
 	# recombine
-	users = recombine([u1, u2])
-
+	users = u1
+	users.append(u2)
+	
 	# get climb data
 	climbs = getClimbs(data)
-
+	
 	# output
 	users.to_csv(sys.argv[2], header=False, index=False)
 	climbs.to_csv(sys.argv[3], header=False, index=False)

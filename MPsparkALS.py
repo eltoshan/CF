@@ -19,7 +19,7 @@ def parseRating(line):
     """
     fields = line.strip().split(",")
     return randint(0,9), \
-    	(float(fields[1]), int(fields[0]), float(fields[2]))
+    	(int(fields[1]), int(fields[0]), float(int(fields[2])))
 
 def parseClimb(line):
     """
@@ -78,7 +78,7 @@ if __name__ == "__main__":
     # ratings is an RDD of (last digit of timestamp, (userId, climbID, rating))
     ratings = sc.textFile(sys.argv[1]).map(parseRating)
 
-    # movies is an RDD of (movieId, movieTitle)
+    # movies is an RDD of (climbId, climbName)
     routes = dict(sc.textFile(sys.argv[2]).map(parseClimb).collect())
 
     numRatings = ratings.count()
@@ -86,7 +86,6 @@ if __name__ == "__main__":
     numRoutes = ratings.values().map(lambda r: r[1]).distinct().count()
 
     print "Got %d ratings from %d users on %d routes." % (numRatings, numUsers, numRoutes)
-
 
     # split to training/validation/test
     numPartitions = 4
@@ -108,12 +107,11 @@ if __name__ == "__main__":
 
     print "Training: %d, validation: %d, test: %d" % (numTraining, numValidation, numTest)
 
-
     # compare models
 
-    ranks = [20, 100]
-    numIters = [10, 20]
-    lambdas = [0.01, 0.30, 0.60]
+    ranks = [4,24,48]
+    numIters = [10]
+    lambdas = [0.01,0.10]
     bestModel = None
     bestValidationRmse = float("inf")
     bestRank = 0
@@ -141,15 +139,26 @@ if __name__ == "__main__":
 
 
     # compare predicted vs actual ratings on test set
-    compRatings = compareRatings(bestModel, test).values().collect()
-    with open("./out/MPalsPred.csv", "wb") as f:
-    	writer = csv.writer(f)
-    	writer.writerows(compRatings)
-    ratingKeys = compareRatings(bestModel, test).keys().collect()
-    with open("./out/MPalsPred_keys.csv", "wb") as f:
-    	writer = csv.writer(f)
-    	writer.writerows(ratingKeys)
+    # compRatings = compareRatings(bestModel, test).values().collect()
+    # with open("./out/MPalsPred.csv", "wb") as f:
+    # 	writer = csv.writer(f)
+    # 	writer.writerows(compRatings)
+    # ratingKeys = compareRatings(bestModel, test).keys().collect()
+    # with open("./out/MPalsPred_keys.csv", "wb") as f:
+    # 	writer = csv.writer(f)
+    # 	writer.writerows(ratingKeys)
 
+    users = ratings.values().map(lambda x: x[0]).distinct().collect()
+    user = 109673281
+    userRatings = ratings.values().filter(lambda x: x[0] == user).collect()
+    userClimbIDs = set(x[1] for x in userRatings)
+    userCandidates = sc.parallelize([m for m in routes if m not in userClimbIDs])
+    predictions = bestModel.predictAll(userCandidates.map(lambda x: (user, x))).collect()
+    recommendations = sorted(predictions, key=lambda x: x[2], reverse=True)[:10]
+
+    print "Routes recommended for user %d:" % user
+    for i in xrange(len(recommendations)):
+        print ("%2d: %s" % (i + 1, routes[recommendations[i][1]])).encode('ascii', 'ignore')
 
     # clean up
     sc.stop
