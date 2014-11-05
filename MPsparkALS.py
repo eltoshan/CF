@@ -64,7 +64,7 @@ def computeRmse(model, data, n):
 if __name__ == "__main__":
     if (len(sys.argv) != 3):
         print "Usage: /path/to/spark/bin/spark-submit --driver-memory 2g " + \
-          "MPsparkALS.py ratingsData routeData"
+          "MPsparkALS.py ./data/nrgRatings.csv ./data/nrgClimbs.csv"
         sys.exit(1)
 
     # set up environment
