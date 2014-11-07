@@ -39,9 +39,11 @@ if __name__ == "__main__":
 	u2 = getUsers2(data)
 
 	# recombine
-	users = u1
-	users.append(u2)
-	
+	users = recombine([u1,u2])
+	users['climbID'] = users['climbID'].astype(int, copy=False)
+	users['userID'] = users['userID'].astype(int, copy=False)
+	users['userRating'] = users['userRating'].astype(float, copy=False)
+
 	# get climb data
 	climbs = getClimbs(data)
 	

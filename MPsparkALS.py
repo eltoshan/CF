@@ -3,12 +3,9 @@
 import sys
 import itertools
 import time
-import csv
 import random
-from random import randint
 from math import sqrt
 from operator import add
-from os.path import join, isfile, dirname
 
 from pyspark import SparkConf, SparkContext
 from pyspark.mllib.recommendation import ALS
@@ -18,8 +15,8 @@ def parseRating(line):
     Parses a rating record for climb in format climbID,userID,rating .
     """
     fields = line.strip().split(",")
-    return randint(0,9), \
-    	(int(fields[1]), int(fields[0]), float(int(fields[2])))
+    return random.randint(0,9), \
+    	(int(fields[1]), int(fields[0]), float(fields[2]))
 
 def parseClimb(line):
     """
@@ -27,22 +24,6 @@ def parseClimb(line):
     """
     fields = line.strip().split(",")
     return int(fields[0]), str(fields[1]) + " " + str(fields[2]) 
-
-def loadRatings(ratingsFile):
-    """
-    Load ratings from file.
-    """
-    if not isfile(ratingsFile):
-        print "File %s does not exist." % ratingsFile
-        sys.exit(1)
-    f = open(ratingsFile, 'r')
-    ratings = filter(lambda r: r[2] > 0, [parseRating(line)[1] for line in f])
-    f.close()
-    if not ratings:
-        print "No ratings provided."
-        sys.exit(1)
-    else:
-        return ratings
 
 def compareRatings(model, data):
     """
@@ -109,7 +90,7 @@ if __name__ == "__main__":
 
     # compare models
 
-    ranks = [4,24,48]
+    ranks = [4,40]
     numIters = [10]
     lambdas = [0.01,0.10]
     bestModel = None
@@ -137,24 +118,14 @@ if __name__ == "__main__":
     print "The best model was trained with rank = %d, lambda = %.2f " % (bestRank, bestLambda) \
         + "and numIter = %d, and its RMSE on the test set is %f." % (bestNumIter, testRmse)
 
-
-    # compare predicted vs actual ratings on test set
-    # compRatings = compareRatings(bestModel, test).values().collect()
-    # with open("./out/MPalsPred.csv", "wb") as f:
-    # 	writer = csv.writer(f)
-    # 	writer.writerows(compRatings)
-    # ratingKeys = compareRatings(bestModel, test).keys().collect()
-    # with open("./out/MPalsPred_keys.csv", "wb") as f:
-    # 	writer = csv.writer(f)
-    # 	writer.writerows(ratingKeys)
-
     users = ratings.values().map(lambda x: x[0]).distinct().collect()
+    # user = users[0]
     user = 109673281
     userRatings = ratings.values().filter(lambda x: x[0] == user).collect()
     userClimbIDs = set(x[1] for x in userRatings)
-    userCandidates = sc.parallelize([m for m in routes if m not in userClimbIDs])
+    userCandidates = sc.parallelize([r for r in routes if r not in userClimbIDs])
     predictions = bestModel.predictAll(userCandidates.map(lambda x: (user, x))).collect()
-    recommendations = sorted(predictions, key=lambda x: x[2], reverse=True)[:10]
+    recommendations = sorted(predictions, key=lambda x: x[2], reverse=True)[:20]
 
     print "Routes recommended for user %d:" % user
     for i in xrange(len(recommendations)):
