@@ -59,7 +59,7 @@ if __name__ == "__main__":
     # ratings is an RDD of (last digit of timestamp, (userId, climbID, rating))
     ratings = sc.textFile(sys.argv[1]).map(parseRating)
 
-    # movies is an RDD of (climbId, climbName)
+    # routes is an RDD of (climbId, climbName)
     routes = dict(sc.textFile(sys.argv[2]).map(parseClimb).collect())
 
     numRatings = ratings.count()
